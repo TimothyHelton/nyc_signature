@@ -15,6 +15,6 @@ Indices and tables
 
 ----
 
-Visit the projects
+Visit the project's
 `webpage <https://timothyhelton.github.io/nyc_signature.html>`_ for more
 information.
