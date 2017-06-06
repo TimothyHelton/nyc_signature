@@ -5,7 +5,6 @@
 
 .. moduleauthor:: Timothy Helton <timothy.j.helton@gmail.com>
 """
-import os
 import os.path as osp
 
 from matplotlib import pyplot as plt
@@ -15,9 +14,12 @@ import pandas as pd
 import seaborn as sns
 
 
-thousands_formatter = FuncFormatter(lambda x, position: f'{x * 1e-3}')
+percent_formatter = FuncFormatter(lambda x, position: f'{x * 100:.1f}%')
+thousands_formatter = FuncFormatter(lambda x, position: f'{x * 1e-3:.0f}')
+sns.set_palette('rainbow')
 colors = sns.color_palette()
 label_size = 14
+legend_size = 12
 title_size = 20
 super_title_size = 24
 
@@ -39,6 +41,15 @@ def save_fig(name=None, save=False):
 class Age:
     """
     Class to analyze age characteristics of voters.
+
+    :Attributes:
+
+    - **columns**: *list* list of column names for age data
+    - **data**: *DataFrame* age data
+    - **data_link**: *str* link to US Census web page containing the source \
+        age data
+    - **data_file**: *str* path to data file on disk
+    - **data_types**: *tuple* data types for each column
 
     """
     def __init__(self):
@@ -105,23 +116,61 @@ class Age:
         :param bool save: if True the figure will be saved
         """
         fig = plt.figure('Age Vote',
-                         figsize=(10, 15), facecolor='white',
+                         figsize=(10, 10), facecolor='white',
                          edgecolor='black')
-        rows, cols = (3, 1)
+        rows, cols = (2, 2)
         ax0 = plt.subplot2grid((rows, cols), (0, 0))
-        ax1 = plt.subplot2grid((rows, cols), (1, 0))
-        ax2 = plt.subplot2grid((rows, cols), (2, 0))
+        ax1 = plt.subplot2grid((rows, cols), (0, 1), sharex=ax0, sharey=ax0)
+        ax2 = plt.subplot2grid((rows, cols), (1, 0), sharex=ax0)
+        ax3 = plt.subplot2grid((rows, cols), (1, 1), sharex=ax0, sharey=ax2)
 
-        for n, vote in enumerate(('voted_yes', 'voted_no')):
-            (self.data.query('sex == "both sexes"')[vote]
-             .plot(kind='area', alpha=0.5, ax=ax0))
-        ax0.legend(['Voted', 'Did Not Vote'])
+        both_sexes = self.data.query('sex == "both sexes"')
+        female = self.data.query('sex == "female"')
+        male = self.data.query('sex == "male"')
+
+        # Voters All US Plot
+        (both_sexes
+         .voted_yes
+         .plot(kind='area', alpha=0.5, ax=ax0))
         ax0.set_title('Voters vs Age', fontsize=title_size)
-        ax0.set_xlabel('Age ($years$)', fontsize=label_size)
         ax0.set_ylabel('People ($thousands$)', fontsize=label_size)
         ax0.yaxis.set_major_formatter(thousands_formatter)
 
-        plt.suptitle('Voter Age Distributions',
+        # Voters Gender Plot
+        for n, gender in enumerate((female, male)):
+            (gender
+             .voted_yes
+             .plot(kind='area', alpha=0.5, color=colors[-n], ax=ax1))
+        ax1.set_title('Voters vs Age by Gender', fontsize=title_size)
+
+        # Voters All US Percentage Plot
+        (both_sexes
+         .voted_yes
+         .div(both_sexes.us_population)
+         .plot(kind='area', alpha=0.5, ax=ax2))
+        ax2.set_title('Percent Voters vs Age', fontsize=title_size)
+        ax2.set_ylabel('Voting Percentage of Age', fontsize=label_size)
+        ax2.yaxis.set_major_formatter(percent_formatter)
+
+        # Voters Gender Percentage Plot
+        for n, gender in enumerate((female, male)):
+            (gender
+             .voted_yes
+             .div(gender.us_population)
+             .plot(kind='area', alpha=0.5, color=colors[-n], ax=ax3))
+        ax3.set_title('Percent Voters vs Age by Gender',
+                      fontsize=title_size)
+
+        for ax in (ax0, ax1):
+            ax.set_xlabel('')
+
+        for ax in (ax2, ax3):
+            ax.set_xlabel('Age ($years$)', fontsize=label_size)
+
+        for ax in (ax1, ax3):
+            ax.legend(['Female', 'Male'], fontsize=legend_size)
+
+        plt.suptitle('US Voter Age Distributions',
                      fontsize=super_title_size, y=1.03)
         plt.tight_layout()
 
