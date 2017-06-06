@@ -16,7 +16,6 @@ import seaborn as sns
 
 percent_formatter = FuncFormatter(lambda x, position: f'{x * 100:.1f}%')
 thousands_formatter = FuncFormatter(lambda x, position: f'{x * 1e-3:.0f}')
-sns.set_palette('rainbow')
 colors = sns.color_palette()
 label_size = 14
 legend_size = 12
@@ -40,17 +39,16 @@ def save_fig(name=None, save=False):
 
 class Age:
     """
-    Class to analyze age characteristics of voters.
+    Class to analyze age characteristics of US voters.
 
     :Attributes:
 
     - **columns**: *list* list of column names for age data
-    - **data**: *DataFrame* age data
+    - **data**: *DataFrame* US voter age data
     - **data_link**: *str* link to US Census web page containing the source \
         age data
     - **data_file**: *str* path to data file on disk
     - **data_types**: *tuple* data types for each column
-
     """
     def __init__(self):
         self.columns = [
@@ -111,7 +109,7 @@ class Age:
 
     def age_vote_plot(self, save=False):
         """
-        Age Kernel Density Estimate plot.
+        US Voter Age plots
 
         :param bool save: if True the figure will be saved
         """
@@ -140,7 +138,7 @@ class Age:
         for n, gender in enumerate((female, male)):
             (gender
              .voted_yes
-             .plot(kind='area', alpha=0.5, color=colors[-n], ax=ax1))
+             .plot(kind='area', alpha=0.5, color=colors[n], ax=ax1))
         ax1.set_title('Voters vs Age by Gender', fontsize=title_size)
 
         # Voters All US Percentage Plot
@@ -157,7 +155,7 @@ class Age:
             (gender
              .voted_yes
              .div(gender.us_population)
-             .plot(kind='area', alpha=0.5, color=colors[-n], ax=ax3))
+             .plot(kind='area', alpha=0.5, color=colors[n], ax=ax3))
         ax3.set_title('Percent Voters vs Age by Gender',
                       fontsize=title_size)
 
@@ -170,7 +168,99 @@ class Age:
         for ax in (ax1, ax3):
             ax.legend(['Female', 'Male'], fontsize=legend_size)
 
-        plt.suptitle('US Voter Age Distributions',
+        plt.suptitle('2016 US Voter Age Distributions',
+                     fontsize=super_title_size, y=1.03)
+        plt.tight_layout()
+
+        save_fig('age_voted', save)
+
+
+class NewYork:
+    """
+    Class to analyze age characteristics of New York state voters.
+
+    :Attributes:
+
+    - **columns**: *list* list of column names for age data
+    - **data**: *DataFrame* New York state voter data
+    - **data_link**: *str* link to US Census web page containing the source \
+        age data
+    - **data_file**: *str* path to data file on disk
+    - **data_types**: *tuple* data types for each column
+    """
+    def __init__(self):
+        self.columns = [
+            'state',
+            'race',
+            'state_population',
+            'state_citizen_population',
+            'registered_yes',
+            'voted_yes',
+        ]
+        self.data = None
+        self.data_link = ('https://www2.census.gov/programs-surveys/cps/'
+                          'tables/p20/580/table04b.xls')
+        self.data_file = osp.join('states_2016_voter.xls')
+
+        self.data_types = ([str] * 2
+                           + [np.int32] * 3
+                           + [np.float64] * 4
+                           + [np.int32]
+                           + [np.float64] * 4)
+
+    def load_data(self):
+        """
+        Load data from file.
+        """
+        current_dir = osp.dirname(osp.realpath(__file__))
+        race_data = osp.realpath(
+            osp.join(current_dir, '..', 'data', self.data_file))
+
+        self.data = pd.read_excel(
+            race_data,
+            # dtype={x: y for x, y in enumerate(self.data_types)},
+            header=None,
+            skip_footer=5,
+            skiprows=5)
+
+        self.data = (self.data
+                     .drop(self.data.loc[:, (list(range(5, 9))
+                                             + list(range(10, 14)))],
+                           axis=1))
+        self.data.columns = self.columns
+        self.data.loc[:, 'state'] = (self.data.loc[:, 'state']
+                                     .fillna(method='ffill')
+                                     .str.lower())
+        for col in ('state', 'race'):
+            self.data.loc[:, col] = (self.data.loc[:, col]
+                                     .astype('category'))
+        self.data.iloc[:, 2:] = self.data.iloc[:, 2:] * 1000
+        self.data = self.data.set_index('state')
+
+    def ethnicity_plot(self, save=False):
+        """
+        New York state ethnicity voter plots.
+
+        :param bool save: if True the figure will be saved
+        """
+        fig = plt.figure('Age Vote',
+                         figsize=(10, 10), facecolor='white',
+                         edgecolor='black')
+        rows, cols = (1, 1)
+        ax0 = plt.subplot2grid((rows, cols), (0, 0))
+
+        (self.data
+         .loc['new york', self.data.columns[[0, 1, 3, 4]]]
+         .set_index('race')
+         .sort_values(by='voted_yes')
+         .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax0))
+
+        ax0.legend(['Total Population', 'Registered Voters', 'Voted in 2016'])
+        ax0.set_xlabel('Group', fontsize=label_size)
+        ax0.set_ylabel('Pelple ($thousands$)', fontsize=label_size)
+        ax0.yaxis.set_major_formatter(thousands_formatter)
+
+        plt.suptitle('2016 New York State Voter Distributions',
                      fontsize=super_title_size, y=1.03)
         plt.tight_layout()
 
