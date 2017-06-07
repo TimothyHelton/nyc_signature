@@ -8,38 +8,15 @@
 import os.path as osp
 
 from matplotlib import pyplot as plt
-from matplotlib.ticker import FuncFormatter
 import numpy as np
 import pandas as pd
-import seaborn as sns
 
-
-percent_formatter = FuncFormatter(lambda x, position: f'{x * 100:.1f}%')
-thousands_formatter = FuncFormatter(lambda x, position: f'{x * 1e-3:.0f}')
-colors = sns.color_palette()
-label_size = 14
-legend_size = 12
-title_size = 20
-super_title_size = 24
-
-
-def save_fig(name=None, save=False):
-    """
-    Helper function to save or display figure.
-
-    :param str name: file name
-    :param bool save: if True the figure will be saved
-    """
-    if save:
-        plt.savefig(f'{name}.png', bbox_inches='tight',
-                    bbox_extra_artists=[super_title_size])
-    else:
-        plt.show()
+from nyc_signature.utils import ax_formatter, colors, size, save_fig
 
 
 class Age:
     """
-    Class to analyze age characteristics of US voters.
+    Class to analyze age characteristics of 2016 US voters.
 
     :Attributes:
 
@@ -66,7 +43,7 @@ class Age:
         self.data = None
         self.data_link = ('https://www2.census.gov/programs-surveys/cps'
                           '/tables/p20/580/table01.xls')
-        self.data_file = osp.join('us_age_2016_voter.xls')
+        self.data_file = 'us_age_2016_voter.xls'
 
         self.data_types = ([str] * 2
                            + [np.int32] * 2
@@ -76,13 +53,14 @@ class Age:
     def __repr__(self):
         return f'Age()'
 
+    # TODO add scraping
     def load_data(self):
         """
         Load data from file.
         """
         current_dir = osp.dirname(osp.realpath(__file__))
-        age_data = osp.realpath(
-            osp.join(current_dir, '..', 'data', self.data_file))
+        age_data = osp.realpath(osp.join(current_dir, '..', 'data',
+                                         self.data_file))
 
         self.data = pd.read_excel(
             age_data,
@@ -130,25 +108,25 @@ class Age:
         (both_sexes
          .voted_yes
          .plot(kind='area', alpha=0.5, ax=ax0))
-        ax0.set_title('Voters vs Age', fontsize=title_size)
-        ax0.set_ylabel('People ($thousands$)', fontsize=label_size)
-        ax0.yaxis.set_major_formatter(thousands_formatter)
+        ax0.set_title('Voters vs Age', fontsize=size['title'])
+        ax0.set_ylabel('People ($thousands$)', fontsize=size['label'])
+        ax0.yaxis.set_major_formatter(ax_formatter['thousands'])
 
         # Voters Gender Plot
         for n, gender in enumerate((female, male)):
             (gender
              .voted_yes
              .plot(kind='area', alpha=0.5, color=colors[n], ax=ax1))
-        ax1.set_title('Voters vs Age by Gender', fontsize=title_size)
+        ax1.set_title('Voters vs Age by Gender', fontsize=size['title'])
 
         # Voters All US Percentage Plot
         (both_sexes
          .voted_yes
          .div(both_sexes.us_population)
          .plot(kind='area', alpha=0.5, ax=ax2))
-        ax2.set_title('Percent Voters vs Age', fontsize=title_size)
-        ax2.set_ylabel('Voting Percentage of Age', fontsize=label_size)
-        ax2.yaxis.set_major_formatter(percent_formatter)
+        ax2.set_title('Percent Voters vs Age', fontsize=size['title'])
+        ax2.set_ylabel('Voting Percentage of Age', fontsize=size['label'])
+        ax2.yaxis.set_major_formatter(ax_formatter['percent'])
 
         # Voters Gender Percentage Plot
         for n, gender in enumerate((female, male)):
@@ -157,19 +135,19 @@ class Age:
              .div(gender.us_population)
              .plot(kind='area', alpha=0.5, color=colors[n], ax=ax3))
         ax3.set_title('Percent Voters vs Age by Gender',
-                      fontsize=title_size)
+                      fontsize=size['title'])
 
         for ax in (ax0, ax1):
             ax.set_xlabel('')
 
         for ax in (ax2, ax3):
-            ax.set_xlabel('Age ($years$)', fontsize=label_size)
+            ax.set_xlabel('Age ($years$)', fontsize=size['label'])
 
         for ax in (ax1, ax3):
-            ax.legend(['Female', 'Male'], fontsize=legend_size)
+            ax.legend(['Female', 'Male'], fontsize=size['legend'])
 
         plt.suptitle('2016 US Voter Age Distributions',
-                     fontsize=super_title_size, y=1.03)
+                     fontsize=size['super_title'], y=1.03)
         plt.tight_layout()
 
         save_fig('age_voted', save)
@@ -177,7 +155,7 @@ class Age:
 
 class NewYork:
     """
-    Class to analyze age characteristics of New York state voters.
+    Class to analyze age characteristics of 2016 New York state voters.
 
     :Attributes:
 
@@ -200,7 +178,7 @@ class NewYork:
         self.data = None
         self.data_link = ('https://www2.census.gov/programs-surveys/cps/'
                           'tables/p20/580/table04b.xls')
-        self.data_file = osp.join('states_2016_voter.xls')
+        self.data_file = 'states_2016_voter.xls'
 
         self.data_types = ([str] * 2
                            + [np.int32] * 3
@@ -208,13 +186,15 @@ class NewYork:
                            + [np.int32]
                            + [np.float64] * 4)
 
+    # TODO add scraping
+    # TODO fix dtype
     def load_data(self):
         """
         Load data from file.
         """
         current_dir = osp.dirname(osp.realpath(__file__))
-        race_data = osp.realpath(
-            osp.join(current_dir, '..', 'data', self.data_file))
+        race_data = osp.realpath(osp.join(current_dir, '..', 'data',
+                                          self.data_file))
 
         self.data = pd.read_excel(
             race_data,
@@ -256,12 +236,12 @@ class NewYork:
          .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax0))
 
         ax0.legend(['Total Population', 'Registered Voters', 'Voted in 2016'])
-        ax0.set_xlabel('Group', fontsize=label_size)
-        ax0.set_ylabel('Pelple ($thousands$)', fontsize=label_size)
-        ax0.yaxis.set_major_formatter(thousands_formatter)
+        ax0.set_xlabel('Group', fontsize=size['label'])
+        ax0.set_ylabel('People ($thousands$)', fontsize=size['label'])
+        ax0.yaxis.set_major_formatter(ax_formatter['thousands'])
 
         plt.suptitle('2016 New York State Voter Distributions',
-                     fontsize=super_title_size, y=1.03)
+                     fontsize=size['super_title'], y=1.03)
         plt.tight_layout()
 
         save_fig('age_voted', save)
