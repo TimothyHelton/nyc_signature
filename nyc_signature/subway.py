@@ -6,14 +6,13 @@
 .. moduleauthor:: Timothy Helton <timothy.j.helton@gmail.com>
 """
 from collections import OrderedDict
-import os.path as osp
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
 
-from nyc_signature.utils import ax_formatter, colors, size, save_fig
+from nyc_signature.utils import size, save_fig
 
 
 class Stations:
@@ -36,10 +35,10 @@ class Stations:
             'route_5': str,
             'route_6': str,
             'route_7': str,
-            'route_8': np.int32,
-            'route_9': np.int32,
-            'route_10': np.int32,
-            'route_11': np.int32,
+            'route_8': str,
+            'route_9': str,
+            'route_10': str,
+            'route_11': str,
             'entrance_type': str,
             'entry': str,
             'exit_only': str,
@@ -67,19 +66,54 @@ class Stations:
         Load data from file.
         """
         self.data = pd.read_csv(self.data_url,
-                                dtype=self.data_types)
-        self.data.columns = list(self.data_types.keys())
+                                dtype=self.data_types,
+                                header=0,
+                                names=self.data_types.keys())
+
+        not_categories_cols = (
+            'station_name',
+            'latitude',
+            'longitude',
+            'north_south_street',
+            'east_west_street',
+            'entrance_latitude',
+            'entrance_longitude',
+            'station_location',
+            'entrance_location',
+        )
+        categories_cols = [x for x in self.data_types.keys()
+                           if x not in not_categories_cols]
+        for col in categories_cols:
+            self.data.loc[:, col] = (self.data.loc[:, col]
+                                     .astype('category'))
+
         self.trains = pd.melt(self.data,
                               id_vars=['latitude', 'longitude'],
                               value_vars=[f'route_{x}' for x in range(1, 12)],
-                              var_name='train',
-                              value_name='line')
+                              var_name='route',
+                              value_name='train')
+        for col in ('route', 'train'):
+            self.trains.loc[:, col] = (self.trains.loc[:, col]
+                                       .astype('category'))
 
-    # TODO format plot
     def train_plot(self, save=False):
         """
         Plot stations by train.
         """
-        sns.lmplot(x='latitude', y='longitude', data=self.trains, hue='line',
-                   fit_reg=False, size=10)
-        save_fig('stations_train', save)
+        sns.lmplot(x='latitude', y='longitude',
+                   data=(self.trains
+                         .sort_values(by='train')),
+                   hue='train', fit_reg=False, legend=False, markers='d',
+                   size=10)
+        legend = plt.legend(bbox_to_anchor=(1.10, 0.5), fancybox=True,
+                            fontsize=size['legend'], loc='center right',
+                            shadow=True, title='Train')
+        plt.setp(legend.get_title(), fontsize=size['label'])
+        plt.xlabel('Latitude', fontsize=size['label'])
+        plt.ylabel('Longitude', fontsize=size['label'])
+
+        plt.tight_layout()
+        plt.suptitle('New York Subway Train Stations',
+                     fontsize=size['super_title'], y=1.03)
+
+        save_fig('stations_trains', save)
