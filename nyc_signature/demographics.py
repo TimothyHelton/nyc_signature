@@ -5,8 +5,6 @@
 
 .. moduleauthor:: Timothy Helton <timothy.j.helton@gmail.com>
 """
-import os.path as osp
-
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
@@ -144,9 +142,9 @@ class Age:
         for ax in (ax1, ax3):
             ax.legend(['Female', 'Male'], fontsize=size['legend'])
 
+        plt.tight_layout()
         plt.suptitle('2016 US Voter Age Distributions',
                      fontsize=size['super_title'], y=1.03)
-        plt.tight_layout()
 
         save_fig('age_voted', save)
 
@@ -234,8 +232,8 @@ class NewYork:
         ax0.set_ylabel('People ($thousands$)', fontsize=size['label'])
         ax0.yaxis.set_major_formatter(ax_formatter['thousands'])
 
+        plt.tight_layout()
         plt.suptitle('2016 New York State Voter Distributions',
                      fontsize=size['super_title'], y=1.03)
-        plt.tight_layout()
 
         save_fig('age_voted', save)
