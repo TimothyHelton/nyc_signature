@@ -5,6 +5,8 @@
 
 .. moduleauthor:: Timothy Helton <timothy.j.helton@gmail.com>
 """
+import os.path as osp
+
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import seaborn as sns
@@ -14,7 +16,12 @@ ax_formatter = {
     'percent': FuncFormatter(lambda x, position: f'{x * 100:.1f}%'),
     'thousands': FuncFormatter(lambda x, position: f'{x * 1e-3:.0f}'),
 }
+
 colors = sns.color_palette()
+
+current_dir = osp.dirname(osp.realpath(__file__))
+data_dir = osp.realpath(osp.join(current_dir, '..', 'data'))
+
 size = {
     'label': 14,
     'legend': 12,

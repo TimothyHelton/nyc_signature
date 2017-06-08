@@ -22,9 +22,7 @@ class Stations:
     """
     def __init__(self):
         self.data = None
-        self.data_link = ('https://data.ny.gov/api/views/i9wp-a4ja/rows.csv'
-                          '?accessType=DOWNLOAD')
-        self.data_file = 'nyc_subway_locations.csv'
+        self.data_url = 'https://data.ny.gov/api/views/i9wp-a4ja/rows.csv'
         self.data_types = OrderedDict({
             'division': str,
             'line': str,
@@ -64,15 +62,11 @@ class Stations:
     def __repr__(self):
         return f'Stations()'
 
-    # TODO add scraping
     def load_data(self):
         """
         Load data from file.
         """
-        current_dir = osp.dirname(osp.realpath(__file__))
-        station_data = osp.realpath(osp.join(current_dir, '..', 'data',
-                                             self.data_file))
-        self.data = pd.read_csv(station_data,
+        self.data = pd.read_csv(self.data_url,
                                 dtype=self.data_types)
         self.data.columns = list(self.data_types.keys())
         self.trains = pd.melt(self.data,

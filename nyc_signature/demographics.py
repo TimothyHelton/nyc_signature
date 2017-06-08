@@ -10,6 +10,7 @@ import os.path as osp
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 
 from nyc_signature.utils import ax_formatter, colors, size, save_fig
 
@@ -28,52 +29,49 @@ class Age:
     - **data_types**: *tuple* data types for each column
     """
     def __init__(self):
-        self.columns = [
-            'sex',
-            'age_years',
-            'us_population',
-            'us_citizen_population',
-            'registered_yes',
-            'registered_no',
-            'registered_no_response',
-            'voted_yes',
-            'voted_no',
-            'voted_no_response',
-        ]
+        self.data_types = {
+            'sex': str,
+            'age_years': str,
+            'us_population': np.int32,
+            'us_citizen_population': np.int32,
+            'registered_yes': np.int32,
+            'registered_yes_pct': np.float64,
+            'registered_no': np.int32,
+            'registered_no_pct': np.float64,
+            'registered_no_response': np.int32,
+            'registered_no_response_pct': np.float64,
+            'voted_yes': np.int32,
+            'voted_yes_pct': np.float64,
+            'voted_no': np.int32,
+            'voted_no_pct': np.float64,
+            'voted_no_response': np.int32,
+            'voted_no_response_pct': np.float64,
+            'total_registered_pct': np.float64,
+            'total_voted_pct': np.float64,
+        }
         self.data = None
-        self.data_link = ('https://www2.census.gov/programs-surveys/cps'
-                          '/tables/p20/580/table01.xls')
+        self.data_url = ('https://www2.census.gov/programs-surveys/cps'
+                         '/tables/p20/580/table01.xls')
         self.data_file = 'us_age_2016_voter.xls'
-
-        self.data_types = ([str] * 2
-                           + [np.int32] * 2
-                           + [np.int32, np.float64] * 6
-                           + [np.float64] * 2)
 
     def __repr__(self):
         return f'Age()'
 
-    # TODO add scraping
     def load_data(self):
         """
         Load data from file.
         """
-        current_dir = osp.dirname(osp.realpath(__file__))
-        age_data = osp.realpath(osp.join(current_dir, '..', 'data',
-                                         self.data_file))
-
         self.data = pd.read_excel(
-            age_data,
-            dtype={x: y for x, y in enumerate(self.data_types)},
-            header=None,
+            self.data_url,
+            dtype=self.data_types,
+            header=0,
+            names=self.data_types.keys(),
             skip_footer=5,
-            skiprows=6)
+            skiprows=5)
 
         self.data = (self.data
-                     .drop(self.data.loc[:, list(range(5, 16, 2)) + [16, 17]],
+                     .drop(self.data.iloc[:, list(range(5, 16, 2)) + [16, 17]],
                            axis=1))
-        self.data.columns = self.columns
-        self.data.loc[self.data.sex == 'nan', 'sex'] = np.nan
         self.data.loc[:, 'sex'] = (self.data.loc[:, 'sex']
                                    .fillna(method='ffill')
                                    .str.lower())
@@ -167,47 +165,43 @@ class NewYork:
     - **data_types**: *tuple* data types for each column
     """
     def __init__(self):
-        self.columns = [
-            'state',
-            'race',
-            'state_population',
-            'state_citizen_population',
-            'registered_yes',
-            'voted_yes',
-        ]
+        self.data_types = {
+            'state': str,
+            'race': str,
+            'state_population': np.int32,
+            'state_citizen_population': np.int32,
+            'registered_yes': np.int32,
+            'registered_total_pct': np.float64,
+            'registered_total_error': np.float64,
+            'registered_citizen_pct': np.float64,
+            'registered_citizen_error': np.float64,
+            'voted_yes': np.int32,
+            'voted_total_pct': np.float64,
+            'voted_total_error': np.float64,
+            'voted_citizen_pct': np.float64,
+            'voted_citizen_error': np.float64,
+        }
         self.data = None
-        self.data_link = ('https://www2.census.gov/programs-surveys/cps/'
-                          'tables/p20/580/table04b.xls')
+        self.data_url = ('https://www2.census.gov/programs-surveys/cps/'
+                         'tables/p20/580/table04b.xls')
         self.data_file = 'states_2016_voter.xls'
 
-        self.data_types = ([str] * 2
-                           + [np.int32] * 3
-                           + [np.float64] * 4
-                           + [np.int32]
-                           + [np.float64] * 4)
-
-    # TODO add scraping
-    # TODO fix dtype
     def load_data(self):
         """
         Load data from file.
         """
-        current_dir = osp.dirname(osp.realpath(__file__))
-        race_data = osp.realpath(osp.join(current_dir, '..', 'data',
-                                          self.data_file))
-
         self.data = pd.read_excel(
-            race_data,
-            # dtype={x: y for x, y in enumerate(self.data_types)},
-            header=None,
+            self.data_url,
+            dtype=self.data_types,
+            header=0,
+            names=self.data_types.keys(),
             skip_footer=5,
             skiprows=5)
 
         self.data = (self.data
-                     .drop(self.data.loc[:, (list(range(5, 9))
-                                             + list(range(10, 14)))],
+                     .drop(self.data.iloc[:, (list(range(5, 9))
+                                              + list(range(10, 14)))],
                            axis=1))
-        self.data.columns = self.columns
         self.data.loc[:, 'state'] = (self.data.loc[:, 'state']
                                      .fillna(method='ffill')
                                      .str.lower())
