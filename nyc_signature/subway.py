@@ -21,7 +21,8 @@ class Stations:
     """
     def __init__(self):
         self.data = None
-        self.data_url = 'https://data.ny.gov/api/views/i9wp-a4ja/rows.csv'
+        self.data_url = ('https://timothyhelton.github.io/assets/data/'
+                         'nyc_subway_locations.csv')
         self.data_types = OrderedDict({
             'division': str,
             'line': str,
@@ -92,6 +93,8 @@ class Stations:
                               value_vars=[f'route_{x}' for x in range(1, 12)],
                               var_name='route',
                               value_name='train')
+        self.trains.loc[:, 'train'] = (self.trains.loc[:, 'train']
+                                       .str.strip())
         for col in ('route', 'train'):
             self.trains.loc[:, col] = (self.trains.loc[:, col]
                                        .astype('category'))

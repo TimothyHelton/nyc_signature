@@ -48,9 +48,8 @@ class Age:
             'total_voted_pct': np.float64,
         }
         self.data = None
-        self.data_url = ('https://www2.census.gov/programs-surveys/cps'
-                         '/tables/p20/580/table01.xls')
-        self.data_file = 'us_age_2016_voter.xls'
+        self.data_url = ('https://timothyhelton.github.io/assets/data/'
+                         'us_age_2016_voter.xls')
 
     def __repr__(self):
         return f'Age()'
@@ -180,9 +179,8 @@ class NewYork:
             'voted_citizen_error': np.float64,
         }
         self.data = None
-        self.data_url = ('https://www2.census.gov/programs-surveys/cps/'
-                         'tables/p20/580/table04b.xls')
-        self.data_file = 'states_2016_voter.xls'
+        self.data_url = ('https://timothyhelton.github.io/assets/data/'
+                         'states_2016_voter.xls')
 
     def load_data(self):
         """
