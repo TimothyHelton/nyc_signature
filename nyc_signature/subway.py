@@ -12,7 +12,8 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 
-from nyc_signature.utils import size, save_fig
+from nyc_signature import locations
+from nyc_signature.utils import colors, size, save_fig
 
 
 class Stations:
@@ -101,13 +102,16 @@ class Stations:
 
     def train_plot(self, save=False):
         """
-        Plot stations by train.
+        Plot subway stations by train.
+
+        :param bool save: if True the figure will be saved
         """
         sns.lmplot(x='latitude', y='longitude',
                    data=(self.trains
                          .sort_values(by='train')),
                    hue='train', fit_reg=False, legend=False, markers='d',
-                   size=10)
+                   scatter_kws={'alpha': 0.3}, size=10)
+
         legend = plt.legend(bbox_to_anchor=(1.10, 0.5), fancybox=True,
                             fontsize=size['legend'], loc='center right',
                             shadow=True, title='Train')
@@ -120,3 +124,49 @@ class Stations:
                      fontsize=size['super_title'], y=1.03)
 
         save_fig('stations_trains', save)
+
+    def train_locations_plot(self, save=False):
+        """
+        Plot subway stations and hospital locations
+
+        :param bool save: if True the figure will be saved
+        """
+        title = 'NYC Subway Station and Hospitals Plot'
+        fig = plt.figure(title, figsize=(10, 10), facecolor='white',
+                         edgecolor='black')
+        rows, cols = (1, 1)
+        ax0 = plt.subplot2grid((rows, cols), (0, 0))
+
+        hosp = locations.Hospitals()
+
+        locs = (
+            ('Hospitals',
+             hosp.hospitals,
+             {'color': colors[0],
+              'label': 'Hospitals',
+              'marker': '*',
+              's': 200,
+              }),
+            ('Subway Stations',
+             self.data.loc[:, ['latitude', 'longitude']].drop_duplicates(),
+             {'alpha': 0.5,
+              'color': colors[1],
+              'label': 'Subway Stations',
+              'marker': 'd',
+              's': 30,
+              }),
+        )
+
+        for label, df, kwargs in locs:
+            (df
+             .plot(kind='scatter', x='latitude', y='longitude', **kwargs,
+                   ax=ax0))
+
+        ax0.legend(fontsize=size['legend'])
+        ax0.set_xlabel('Latitude', fontsize=size['label'])
+        ax0.set_ylabel('Longitude', fontsize=size['label'])
+
+        plt.tight_layout()
+        plt.suptitle(title, fontsize=size['super_title'], y=1.05)
+
+        save_fig('stations_hospitals', save)
