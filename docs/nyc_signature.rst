@@ -11,6 +11,14 @@ demographics
     :show-inheritance:
     :synopsis: Module related to voter demographics.
 
+locations
+---------
+.. automodule:: locations
+    :members:
+    :show-inheritance:
+    :synopsis: Module to identify locations of interest to acquire signatures.
+
+
 subway
 ------
 .. automodule:: subway
