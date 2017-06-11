@@ -4,7 +4,10 @@
 from pkg_resources import get_distribution, DistributionNotFound
 import os.path as osp
 
-# from . import nyc_mta
+from . import demographics
+from . import locations
+from . import subway
+from . import utils
 
 
 __version__ = '1.0.0'
