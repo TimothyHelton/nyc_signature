@@ -194,17 +194,21 @@ class NewYork:
             skip_footer=5,
             skiprows=5)
 
-        self.data = (self.data
-                     .drop(self.data.iloc[:, (list(range(5, 9))
-                                              + list(range(10, 14)))],
-                           axis=1))
         self.data.loc[:, 'state'] = (self.data.loc[:, 'state']
                                      .fillna(method='ffill')
                                      .str.lower())
         for col in ('state', 'race'):
             self.data.loc[:, col] = (self.data.loc[:, col]
                                      .astype('category'))
-        self.data.iloc[:, 2:] = self.data.iloc[:, 2:] * 1000
+
+        thousands_cols = (
+            'state_population',
+            'state_citizen_population',
+            'registered_yes',
+            'voted_yes',
+        )
+        self.data.loc[:, thousands_cols] = (self.data.loc[:, thousands_cols]
+                                            * 1000)
         self.data = self.data.set_index('state')
 
     def ethnicity_plot(self, save=False):
@@ -214,21 +218,57 @@ class NewYork:
         :param bool save: if True the figure will be saved
         """
         fig = plt.figure('Age Vote',
-                         figsize=(10, 10), facecolor='white',
+                         figsize=(10, 15), facecolor='white',
                          edgecolor='black')
-        rows, cols = (1, 1)
+        rows, cols = (2, 1)
         ax0 = plt.subplot2grid((rows, cols), (0, 0))
+        ax1 = plt.subplot2grid((rows, cols), (1, 0))
 
+        # Voter Turnout
         (self.data
-         .loc['new york', self.data.columns[[0, 1, 3, 4]]]
+         .loc['new york', ['race',
+                           'state_population',
+                           'registered_yes',
+                           'voted_yes']]
          .set_index('race')
          .sort_values(by='voted_yes')
          .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax0))
 
-        ax0.legend(['Total Population', 'Registered Voters', 'Voted in 2016'])
-        ax0.set_xlabel('Group', fontsize=size['label'])
+        ax0.set_title('2016 New York Voters', fontsize=size['title'])
+        ax0.legend(['Total Population', 'Registered Voters', 'Voted in 2016'],
+                   fontsize=size['legend'])
         ax0.set_ylabel('People ($thousands$)', fontsize=size['label'])
         ax0.yaxis.set_major_formatter(ax_formatter['thousands'])
+
+        # Voter Turnout Percentage
+        voter_pct = (self.data
+                     .loc['new york', ['race',
+                                       'registered_total_pct',
+                                       'registered_total_error',
+                                       'voted_total_pct',
+                                       'voted_total_error']]
+                     .set_index('race')
+                     .applymap(lambda x: float(x))
+                     .sort_values(by='voted_total_pct'))
+
+        data_cols = ['registered_total_pct', 'voted_total_pct']
+        voter_err = voter_pct.drop(data_cols, axis=1)
+        voter_err.columns = data_cols
+        error_kw = {'capsize': 5, 'capthick': 1, 'elinewidth': 1}
+
+        voter_pct.plot(kind='bar', y=data_cols, alpha=0.5, edgecolor='black',
+                       error_kw=error_kw, yerr=voter_err, ax=ax1)
+
+        ax1.set_title('2016 New York Voter Percentages',
+                      fontsize=size['title'])
+        ax1.legend(['Registered Voters', 'Voted in 2016'],
+                   fontsize=size['legend'])
+        ax1.set_ylabel('Percentage', fontsize=size['label'])
+        ax1.yaxis.set_major_formatter(ax_formatter['percent'])
+
+        for ax in (ax0, ax1):
+            ax.set_xlabel('Group', fontsize=size['label'])
+            ax.set_xticklabels(ax.xaxis.get_majorticklabels(), rotation=80)
 
         plt.tight_layout()
         plt.suptitle('2016 New York State Voter Distributions',
