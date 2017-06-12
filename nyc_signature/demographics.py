@@ -79,6 +79,9 @@ class Age:
         self.data = self.data[self.data.loc[:, 'age_years'].str.isnumeric()]
         self.data.iloc[:, 2:] = self.data.iloc[:, 2:] * 1000
         self.data = self.data.set_index('age_years')
+        self.data['voted_yes_pct'] = (self.data
+                                      .voted_yes
+                                      .div(self.data.us_population))
 
     def age_vote_plot(self, save=False):
         """
@@ -86,8 +89,8 @@ class Age:
 
         :param bool save: if True the figure will be saved
         """
-        fig = plt.figure('Age Vote',
-                         figsize=(10, 10), facecolor='white',
+        fig = plt.figure('Voter Age',
+                         figsize=(12, 10), facecolor='white',
                          edgecolor='black')
         rows, cols = (2, 2)
         ax0 = plt.subplot2grid((rows, cols), (0, 0))
@@ -102,8 +105,16 @@ class Age:
         # Voters All US Plot
         (both_sexes
          .voted_yes
-         .plot(kind='area', alpha=0.5, ax=ax0))
+         .plot(kind='area', alpha=0.5, label='Voters', ax=ax0))
+
+        target_group = both_sexes.voted_yes.copy()
+        target_group.loc[target_group < target_group.quantile(0.7)] = 0
+        (target_group
+         .plot(kind='area', alpha=0.2, color=colors[2], label='Target Group',
+               ax=ax0))
+
         ax0.set_title('Voters vs Age', fontsize=size['title'])
+        ax0.legend(loc='upper left', fontsize=size['legend'])
         ax0.set_ylabel('People ($thousands$)', fontsize=size['label'])
         ax0.yaxis.set_major_formatter(ax_formatter['thousands'])
 
@@ -118,10 +129,18 @@ class Age:
         (both_sexes
          .voted_yes
          .div(both_sexes.us_population)
-         .plot(kind='area', alpha=0.5, ax=ax2))
+         .plot(kind='area', alpha=0.5, label='Voter Percentage', ax=ax2))
+
+        target_group = both_sexes.voted_yes_pct.copy()
+        target_group.loc[target_group < 0.5] = 0
+        (target_group
+         .plot(kind='area', alpha=0.2, color=colors[2], label='Target Group',
+               ax=ax2))
+
         ax2.set_title('Percent Voters vs Age', fontsize=size['title'])
+        ax2.legend(loc='upper left', fontsize=size['legend'])
         ax2.set_ylabel('Voting Percentage of Age', fontsize=size['label'])
-        ax2.yaxis.set_major_formatter(ax_formatter['percent'])
+        ax2.yaxis.set_major_formatter(ax_formatter['percent_convert'])
 
         # Voters Gender Percentage Plot
         for n, gender in enumerate((female, male)):
@@ -254,7 +273,7 @@ class NewYork:
         data_cols = ['registered_total_pct', 'voted_total_pct']
         voter_err = voter_pct.drop(data_cols, axis=1)
         voter_err.columns = data_cols
-        error_kw = {'capsize': 5, 'capthick': 1, 'elinewidth': 1}
+        error_kw = {'capsize': 3, 'capthick': 1, 'elinewidth': 1}
 
         voter_pct.plot(kind='bar', y=data_cols, alpha=0.5, edgecolor='black',
                        error_kw=error_kw, yerr=voter_err, ax=ax1)
