@@ -37,6 +37,7 @@ setup(
     keywords='common tools utility',
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=[
+        'bokeh',
         'geocoder',
         'matplotlib',
         'numpy',
