@@ -50,6 +50,7 @@ class Age:
         self.data = None
         self.data_url = ('https://timothyhelton.github.io/assets/data/'
                          'us_age_2016_voter.xls')
+        self.load_data()
 
     def __repr__(self):
         return f'Age()'
@@ -200,6 +201,7 @@ class NewYork:
         self.data = None
         self.data_url = ('https://timothyhelton.github.io/assets/data/'
                          'states_2016_voter.xls')
+        self.load_data()
 
     def load_data(self):
         """
