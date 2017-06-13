@@ -7,13 +7,16 @@
 """
 from collections import OrderedDict
 
+from bokeh import io as bkio
+from bokeh import models as bkm
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
 
+from . import keys
 from nyc_signature import locations
-from nyc_signature.utils import colors, size, save_fig
+from nyc_signature.utils import size, save_fig
 
 
 class Stations:
@@ -27,7 +30,7 @@ class Stations:
         self.data_types = OrderedDict({
             'division': str,
             'line': str,
-            'station_name': str,
+            'name': str,
             'latitude': np.float64,
             'longitude': np.float64,
             'route_1': str,
@@ -59,6 +62,7 @@ class Stations:
             'entrance_location': str,
         })
         self.trains = None
+        self.load_data()
 
     def __repr__(self):
         return f'Stations()'
@@ -73,7 +77,7 @@ class Stations:
                                 names=self.data_types.keys())
 
         not_categories_cols = (
-            'station_name',
+            'name',
             'latitude',
             'longitude',
             'north_south_street',
@@ -106,7 +110,7 @@ class Stations:
 
         :param bool save: if True the figure will be saved
         """
-        sns.lmplot(x='latitude', y='longitude',
+        sns.lmplot(x='longitude', y='latitude',
                    data=(self.trains
                          .sort_values(by='train')),
                    hue='train', fit_reg=False, legend=False, markers='d',
@@ -116,8 +120,8 @@ class Stations:
                             fontsize=size['legend'], loc='center right',
                             shadow=True, title='Train')
         plt.setp(legend.get_title(), fontsize=size['label'])
-        plt.xlabel('Latitude', fontsize=size['label'])
-        plt.ylabel('Longitude', fontsize=size['label'])
+        plt.xlabel('Longitude', fontsize=size['label'])
+        plt.ylabel('Latitude', fontsize=size['label'])
 
         plt.tight_layout()
         plt.suptitle('New York Subway Train Stations',
@@ -125,48 +129,64 @@ class Stations:
 
         save_fig('stations_trains', save)
 
-    def train_locations_plot(self, save=False):
+    def train_locations_plot(self):
         """
-        Plot subway stations and hospital locations
+        Plot subway stations and interest locations.
 
-        :param bool save: if True the figure will be saved
+        .. warning:: This method requires a Google API Key
         """
-        title = 'NYC Subway Station and Hospitals Plot'
-        fig = plt.figure(title, figsize=(10, 10), facecolor='white',
-                         edgecolor='black')
-        rows, cols = (1, 1)
-        ax0 = plt.subplot2grid((rows, cols), (0, 0))
+        map_options = {
+            'lat': 40.70,
+            'lng': -73.92,
+            'map_type': 'roadmap',
+            'zoom': 10,
+        }
+        plot = bkm.GMapPlot(
+            api_key=keys.GOOGLE_API_KEY,
+            x_range=bkm.Range1d(),
+            y_range=bkm.Range1d(),
+            map_options=bkm.GMapOptions(**map_options),
+            plot_width=400,
+            plot_height=600,
+        )
+        plot.title.text = 'New York City Hospitals and Subway Stations'
 
-        hosp = locations.Hospitals()
-
-        locs = (
-            ('Hospitals',
-             hosp.hospitals,
-             {'color': colors[0],
-              'label': 'Hospitals',
-              'marker': '*',
-              's': 200,
-              }),
-            ('Subway Stations',
-             self.data.loc[:, ['latitude', 'longitude']].drop_duplicates(),
-             {'alpha': 0.5,
-              'color': colors[1],
-              'label': 'Subway Stations',
-              'marker': 'd',
-              's': 30,
-              }),
+        hospital = bkm.Circle(
+            x='longitude',
+            y='latitude',
+            fill_alpha=0.8,
+            fill_color='#cd5b1b',
+            line_color=None,
+            size=14,
         )
 
-        for label, df, kwargs in locs:
-            (df
-             .plot(kind='scatter', x='latitude', y='longitude', **kwargs,
-                   ax=ax0))
+        subway = bkm.Diamond(
+            x='longitude',
+            y='latitude',
+            fill_color='#3062C8',
+            line_color=None,
+            size=10,
+        )
 
-        ax0.legend(fontsize=size['legend'])
-        ax0.set_xlabel('Latitude', fontsize=size['label'])
-        ax0.set_ylabel('Longitude', fontsize=size['label'])
+        hosp = locations.Hospitals()
+        hospitals = bkm.sources.ColumnDataSource(hosp.hospitals)
+        plot.add_glyph(hospitals, hospital)
 
-        plt.tight_layout()
-        plt.suptitle(title, fontsize=size['super_title'], y=1.05)
+        subway_stations = bkm.sources.ColumnDataSource(
+            data=(self.data
+                  .loc[:, ['name', 'latitude', 'longitude']]
+                  .drop_duplicates())
+        )
+        plot.add_glyph(subway_stations, subway)
 
-        save_fig('stations_hospitals', save)
+        hover = bkm.HoverTool()
+        hover.tooltips = [
+            ('Location', '@name'),
+        ]
+        plot.add_tools(
+            hover,
+            bkm.PanTool(),
+            bkm.WheelZoomTool(),
+        )
+
+        bkio.show(plot)
