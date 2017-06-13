@@ -24,6 +24,10 @@ class Stations:
     Class to describe New York city subway stations.
     """
     def __init__(self):
+        try:
+            self.api_key = keys.GOOGLE_API_KEY
+        except NameError:
+            self.api_key = None
         self.data = None
         self.data_url = ('https://timothyhelton.github.io/assets/data/'
                          'nyc_subway_locations.csv')
@@ -129,7 +133,7 @@ class Stations:
 
         save_fig('stations_trains', save)
 
-    def train_locations_plot(self):
+    def stations_locations_plot(self):
         """
         Plot subway stations and interest locations.
 
@@ -142,7 +146,7 @@ class Stations:
             'zoom': 10,
         }
         plot = bkm.GMapPlot(
-            api_key=keys.GOOGLE_API_KEY,
+            api_key=self.api_key,
             x_range=bkm.Range1d(),
             y_range=bkm.Range1d(),
             map_options=bkm.GMapOptions(**map_options),
@@ -189,4 +193,5 @@ class Stations:
             bkm.WheelZoomTool(),
         )
 
+        bkio.output_file('stations_locations.html')
         bkio.show(plot)
