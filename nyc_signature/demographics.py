@@ -19,12 +19,9 @@ class Age:
 
     :Attributes:
 
-    - **columns**: *list* list of column names for age data
     - **data**: *DataFrame* US voter age data
-    - **data_link**: *str* link to US Census web page containing the source \
-        age data
-    - **data_file**: *str* path to data file on disk
-    - **data_types**: *tuple* data types for each column
+    - **data_url**: *str* link to web page containing the source data
+    - **data_types**: *dict* data types for each column
     """
     def __init__(self):
         self.data_types = {
@@ -174,11 +171,8 @@ class NewYork:
 
     :Attributes:
 
-    - **columns**: *list* list of column names for age data
     - **data**: *DataFrame* New York state voter data
-    - **data_link**: *str* link to US Census web page containing the source \
-        age data
-    - **data_file**: *str* path to data file on disk
+    - **data_url**: *str* web page containing the source data
     - **data_types**: *tuple* data types for each column
     """
     def __init__(self):
@@ -218,6 +212,26 @@ class NewYork:
         self.data.loc[:, 'state'] = (self.data.loc[:, 'state']
                                      .fillna(method='ffill')
                                      .str.lower())
+
+        self.data.loc[:, 'race'] = (self.data.loc[:, 'race']
+                                    .str
+                                    .replace('White non-Hispanic alone',
+                                             'White\nNon-Hispanic'))
+
+        self.data.loc[:, 'race'] = (self.data.loc[:, 'race']
+                                    .str
+                                    .replace(r'Hispanic.*',
+                                             'Hispanic'))
+
+        for name in ('Asian', 'Black', 'White'):
+            self.data.loc[:, 'race'] = (self.data.loc[:, 'race']
+                                        .str
+                                        .replace(f'{name} alone', name))
+            self.data.loc[:, 'race'] = (self.data.loc[:, 'race']
+                                        .str
+                                        .replace(f'{name} or in combination',
+                                                 f'{name}\nCombination'))
+
         for col in ('state', 'race'):
             self.data.loc[:, col] = (self.data.loc[:, col]
                                      .astype('category'))
@@ -239,7 +253,7 @@ class NewYork:
         :param bool save: if True the figure will be saved
         """
         fig = plt.figure('Age Vote',
-                         figsize=(10, 15), facecolor='white',
+                         figsize=(10, 10), facecolor='white',
                          edgecolor='black')
         rows, cols = (2, 1)
         ax0 = plt.subplot2grid((rows, cols), (0, 0))
@@ -289,7 +303,8 @@ class NewYork:
 
         for ax in (ax0, ax1):
             ax.set_xlabel('Group', fontsize=size['label'])
-            ax.set_xticklabels(ax.xaxis.get_majorticklabels(), rotation=80)
+            ax.set_xticklabels(ax.xaxis.get_majorticklabels(),
+                               fontsize=12, rotation=75)
 
         plt.tight_layout()
         plt.suptitle('2016 New York State Voter Distributions',

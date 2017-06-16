@@ -40,6 +40,7 @@ setup(
         'bokeh',
         'geocoder',
         'matplotlib',
+        'mock',
         'numpy',
         'pandas',
         'pytest',
