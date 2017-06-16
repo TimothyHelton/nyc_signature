@@ -5,8 +5,6 @@
 
 .. moduleauthor:: Timothy Helton <timothy.j.helton@gmail.com>
 """
-from collections import OrderedDict
-
 from bokeh import io as bkio
 from bokeh import models as bkm
 import matplotlib.pyplot as plt
@@ -14,7 +12,12 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 
-from . import keys
+try:
+    from nyc_signature import keys
+except ModuleNotFoundError:
+    print('A Google API Key is required to generate the geographic images.')
+    print('Upon instancing the Stations class please assign your key to the '
+          'api_key attribute.')
 from nyc_signature import locations
 from nyc_signature.utils import size, save_fig
 
@@ -22,6 +25,20 @@ from nyc_signature.utils import size, save_fig
 class Stations:
     """
     Class to describe New York city subway stations.
+
+    .. _`Google API Key`: https://developers.google.com/maps/documentation/
+        javascript/get-api-key
+
+    .. note:: A `Google API Key`_ is required to create the geographic plots.
+
+    :Attributes:
+
+    - **api_key**: *str* Google API Key
+    - **data**: *DataFrame* New York City subway station data
+    - **data_types**: *dict* data types for each column
+    - **data_url**: *str* link to web page containing the source data
+    - **hosp**: *Hospitals* instance of locations.Hospitals class
+    - **trains**: *DataFrame* New York City subway train data
     """
     def __init__(self):
         try:
@@ -31,7 +48,7 @@ class Stations:
         self.data = None
         self.data_url = ('https://timothyhelton.github.io/assets/data/'
                          'nyc_subway_locations.csv')
-        self.data_types = OrderedDict({
+        self.data_types = {
             'division': str,
             'line': str,
             'name': str,
@@ -64,7 +81,8 @@ class Stations:
             'entrance_longitude': np.float64,
             'station_location': str,
             'entrance_location': str,
-        })
+        }
+        self.hosp = locations.Hospitals()
         self.trains = None
         self.load_data()
 
@@ -107,6 +125,12 @@ class Stations:
         for col in ('route', 'train'):
             self.trains.loc[:, col] = (self.trains.loc[:, col]
                                        .astype('category'))
+
+    def hospital_proximity(self):
+        """
+        Proximity of subway stations to hospitals in NYC.
+        """
+        pass
 
     def stations_plot(self):
         """
@@ -204,8 +228,7 @@ class Stations:
             size=10,
         )
 
-        hosp = locations.Hospitals()
-        hospitals = bkm.sources.ColumnDataSource(hosp.hospitals)
+        hospitals = bkm.sources.ColumnDataSource(self.hosp.hospitals)
         plot.add_glyph(hospitals, hospital)
 
         subway_stations = bkm.sources.ColumnDataSource(

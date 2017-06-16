@@ -17,16 +17,11 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 import os.path as osp
 import sys
 
 from nyc_signature import __version__
 
-mock_modules = [
-]
-for mod_name in mock_modules:
-    sys.modules[mod_name] = mock.Mock()
 
 sys.path.insert(0, osp.abspath('../nyc_signature'))
 
@@ -45,6 +40,10 @@ extensions = [
 ]
 
 autodoc_member_order = 'bysource'
+
+autodoc_mock_imports = [
+    'nyc_signature.keys',
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

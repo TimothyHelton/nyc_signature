@@ -14,12 +14,29 @@ import geocoder
 import pandas as pd
 import requests
 
-from . import keys
+try:
+    from nyc_signature import keys
+except ModuleNotFoundError:
+    print('A Google API Key is required to generate the geographic images.')
+    print('Upon instancing the Hospitals class please assign your key to the '
+          'api_key attribute.')
 
 
 class Hospitals:
     """
     Class to identify and describe hospitals in New York City.
+
+    .. _`Google API Key`: https://developers.google.com/maps/documentation/
+        javascript/get-api-key
+
+    .. note:: A `Google API Key`_ is required to create the geographic plots.
+
+    :Attributes:
+
+    - **api_key**: *str* Google API Key
+    - **data_url**: *str* link to web page containing the source data
+    - **hospitals**: *DataFrame* New York City hospital names, latitude and \
+        longitude
     """
     def __init__(self):
         try:
