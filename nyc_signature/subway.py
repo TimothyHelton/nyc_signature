@@ -42,6 +42,11 @@ class Stations:
     - **hosp_dist**: *DataFrame* distance from hospitals to subway stations
     - **hosp_prox**: *DataFrame** hospital and subway stations in close \
         proximity
+    - **hosp_stations**: *DataFrame* subway stations closest to hospitals
+    - **map_glyph_hospital**: *Circle* map glyph for hospital points
+    - **map_glyph_subway**: *Diamond* map glyph for subway points
+    - **map_options**: *dict* Bokeh plot map options
+    - **map_plot**: *GMapPlot* Bokeh Google Map Plot object
     - **trains**: *DataFrame* New York City subway train data
     """
     def __init__(self):
@@ -89,6 +94,37 @@ class Stations:
         self.hosp = locations.Hospitals()
         self.hosp_dist = None
         self.hosp_prox = None
+        self.hosp_stations = None
+
+        self.map_glyph_hospital = bkm.Circle(
+            x='longitude',
+            y='latitude',
+            fill_alpha=0.8,
+            fill_color='#cd5b1b',
+            line_color=None,
+            size=14,
+        )
+        self.map_glyph_subway = bkm.Diamond(
+            x='longitude',
+            y='latitude',
+            fill_color='#3062C8',
+            line_color=None,
+            size=10,
+        )
+        self.map_options = {
+            'lat': 40.70,
+            'lng': -73.92,
+            'map_type': 'roadmap',
+            'zoom': 10,
+        }
+        self.map_plot = bkm.GMapPlot(
+            api_key=self.api_key,
+            x_range=bkm.Range1d(),
+            y_range=bkm.Range1d(),
+            map_options=bkm.GMapOptions(**self.map_options),
+            plot_width=400,
+            plot_height=600,
+        )
         self.trains = None
         self.load_data()
 
@@ -158,23 +194,67 @@ class Stations:
                                     self.hosp_dist])
         self.hosp_dist.columns = stations.name
 
-        self.hosp_dist['min_dist_2_stations'] = (
+        self.hosp_dist['min_dist'] = (
             self.hosp_dist
             .drop(['latitude', 'longitude'], axis=0)
-            .apply(lambda x: x.sort_values()[:3].mean(),
-                   axis=1))
+            .apply(lambda x: x.min(), axis=1))
 
         self.hosp_prox = (self.hosp_dist
-                          .sort_values('min_dist_2_stations')
+                          .sort_values('min_dist')
                           .idxmin(axis=1))
 
-    def hospital_proximity_plot(self):
+    def hospital_proximity_plot(self, number=10):
         """
         Plot hospital and subway stations of interest
 
         .. warning:: This method requires a Google API Key
+
+        :param int number: number of hospitals to query
         """
-        pass
+        if self.hosp_prox is None:
+            self.hospital_distances()
+
+        hosp_interest = self.hosp_prox[:number]
+        hospital_locs = (self.hosp.hospitals
+                         .loc[(self.hosp.hospitals
+                               .name.isin(hosp_interest.index))])
+
+        station_idx = (self.hosp_dist
+                       .loc[hosp_interest.index, :]
+                       .sort_values('min_dist')
+                       .T
+                       .reset_index(drop=True)
+                       .T
+                       .idxmin(axis=1))
+
+        self.hosp_stations = (self.hosp_dist
+                              .iloc[:, station_idx]
+                              .loc[['latitude', 'longitude'], :]
+                              .T
+                              .reset_index())
+
+        plot = self.map_plot
+        plot.title.text = ('New York City Hospitals and Subway Stations of '
+                           'Interest')
+
+        hospitals = bkm.sources.ColumnDataSource(hospital_locs)
+        plot.add_glyph(hospitals, self.map_glyph_hospital)
+
+        subway_stations = bkm.sources.ColumnDataSource(self.hosp_stations)
+        plot.add_glyph(subway_stations, self.map_glyph_subway)
+
+        hover = bkm.HoverTool()
+        hover.tooltips = [
+            ('Location', '@name'),
+        ]
+        plot.add_tools(
+            hover,
+            bkm.PanTool(),
+            bkm.WheelZoomTool(),
+        )
+
+        bkio.output_file('stations_interest.html')
+        bkio.show(plot)
 
     def stations_plot(self):
         """
@@ -182,29 +262,8 @@ class Stations:
 
         .. warning:: This method requires a Google API Key
         """
-        map_options = {
-            'lat': 40.70,
-            'lng': -73.92,
-            'map_type': 'roadmap',
-            'zoom': 10,
-        }
-        plot = bkm.GMapPlot(
-            api_key=self.api_key,
-            x_range=bkm.Range1d(),
-            y_range=bkm.Range1d(),
-            map_options=bkm.GMapOptions(**map_options),
-            plot_width=400,
-            plot_height=600,
-        )
+        plot = self.map_plot
         plot.title.text = 'New York City Subway Stations'
-
-        subway = bkm.Diamond(
-            x='longitude',
-            y='latitude',
-            fill_color='#3062C8',
-            line_color=None,
-            size=10,
-        )
 
         subway_stations = bkm.sources.ColumnDataSource(
             data=(self.data
@@ -216,7 +275,7 @@ class Stations:
                         .str.replace('nan', 'No'))
                   .drop_duplicates())
         )
-        plot.add_glyph(subway_stations, subway)
+        plot.add_glyph(subway_stations, self.map_glyph_subway)
 
         hover = bkm.HoverTool()
         hover.tooltips = [
@@ -239,48 +298,18 @@ class Stations:
 
         .. warning:: This method requires a Google API Key
         """
-        map_options = {
-            'lat': 40.70,
-            'lng': -73.92,
-            'map_type': 'roadmap',
-            'zoom': 10,
-        }
-        plot = bkm.GMapPlot(
-            api_key=self.api_key,
-            x_range=bkm.Range1d(),
-            y_range=bkm.Range1d(),
-            map_options=bkm.GMapOptions(**map_options),
-            plot_width=400,
-            plot_height=600,
-        )
+        plot = self.map_plot
         plot.title.text = 'New York City Hospitals and Subway Stations'
 
-        hospital = bkm.Circle(
-            x='longitude',
-            y='latitude',
-            fill_alpha=0.8,
-            fill_color='#cd5b1b',
-            line_color=None,
-            size=14,
-        )
-
-        subway = bkm.Diamond(
-            x='longitude',
-            y='latitude',
-            fill_color='#3062C8',
-            line_color=None,
-            size=10,
-        )
-
         hospitals = bkm.sources.ColumnDataSource(self.hosp.hospitals)
-        plot.add_glyph(hospitals, hospital)
+        plot.add_glyph(hospitals, self.map_glyph_hospital)
 
         subway_stations = bkm.sources.ColumnDataSource(
             data=(self.data
                   .loc[:, ['name', 'latitude', 'longitude']]
                   .drop_duplicates())
         )
-        plot.add_glyph(subway_stations, subway)
+        plot.add_glyph(subway_stations, self.map_glyph_subway)
 
         hover = bkm.HoverTool()
         hover.tooltips = [
