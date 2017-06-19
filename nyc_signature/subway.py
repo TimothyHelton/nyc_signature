@@ -7,6 +7,7 @@
 """
 from bokeh import io as bkio
 from bokeh import models as bkm
+import geopy.distance as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -38,6 +39,9 @@ class Stations:
     - **data_types**: *dict* data types for each column
     - **data_url**: *str* link to web page containing the source data
     - **hosp**: *Hospitals* instance of locations.Hospitals class
+    - **hosp_dist**: *DataFrame* distance from hospitals to subway stations
+    - **hosp_prox**: *DataFrame** hospital and subway stations in close \
+        proximity
     - **trains**: *DataFrame* New York City subway train data
     """
     def __init__(self):
@@ -83,6 +87,8 @@ class Stations:
             'entrance_location': str,
         }
         self.hosp = locations.Hospitals()
+        self.hosp_dist = None
+        self.hosp_prox = None
         self.trains = None
         self.load_data()
 
@@ -126,9 +132,47 @@ class Stations:
             self.trains.loc[:, col] = (self.trains.loc[:, col]
                                        .astype('category'))
 
-    def hospital_proximity(self):
+    def hospital_distances(self):
         """
-        Proximity of subway stations to hospitals in NYC.
+        Distances from subway stations to hospitals in NYC.
+        """
+        hospital_locs = np.array(self.hosp.hospitals
+                                 .loc[:, ['latitude', 'longitude']])
+
+        stations = (self.data
+                    .loc[:, ['name', 'latitude', 'longitude']]
+                    .drop_duplicates(['latitude', 'longitude'])
+                    .reset_index(drop=True))
+        subway_locs = np.array(stations.loc[:, ['latitude', 'longitude']])
+
+        distances = np.empty((hospital_locs.shape[0], subway_locs.shape[0]))
+        for hosp_n, h in enumerate(hospital_locs):
+            for sub_n, s in enumerate(subway_locs):
+                distances[hosp_n, sub_n] = gpd.vincenty(h, s).miles
+
+        self.hosp_dist = pd.DataFrame(distances,
+                                      index=self.hosp.hospitals.name)
+        self.hosp_dist = pd.concat([(stations
+                                     .loc[:, ['latitude', 'longitude']]
+                                     .T),
+                                    self.hosp_dist])
+        self.hosp_dist.columns = stations.name
+
+        self.hosp_dist['min_dist_2_stations'] = (
+            self.hosp_dist
+            .drop(['latitude', 'longitude'], axis=0)
+            .apply(lambda x: x.sort_values()[:3].mean(),
+                   axis=1))
+
+        self.hosp_prox = (self.hosp_dist
+                          .sort_values('min_dist_2_stations')
+                          .idxmin(axis=1))
+
+    def hospital_proximity_plot(self):
+        """
+        Plot hospital and subway stations of interest
+
+        .. warning:: This method requires a Google API Key
         """
         pass
 
