@@ -5,12 +5,17 @@
 
 .. moduleauthor:: Timothy Helton <timothy.j.helton@gmail.com>
 """
+import io
+import os.path as osp
+import re
+
 from bokeh import io as bkio
 from bokeh import models as bkm
 import geopy.distance as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import requests
 import seaborn as sns
 
 try:
@@ -348,3 +353,53 @@ class Stations:
                      fontsize=size['super_title'], y=1.03)
 
         save_fig('stations_trains', save)
+
+
+class Turnstile:
+    """
+    Class to investigate the New York City subway turnstile data
+
+    :Attributes:
+
+    **data**: *pandas.DataFrame* NYC turnstile data
+    **data_dir**: *str* path to the local data directory
+    **data_files**: *list* names of all available data files to download from \
+        the url attribute
+    **request**: *requests.models.Response* response object from scraping \
+        the url attribute
+    **url**: *str* web address for turnstile data
+    """
+    def __init__(self):
+        self.url = 'http://web.mta.info/developers/turnstile.html'
+        self.request = requests.get(self.url)
+        self.data = None
+        self.data_files = None
+        self.data_text = None
+
+    def __repr__(self):
+        return f'Turnstile()'
+
+    def available_data_files(self):
+        """
+        Find all available turnstile data files to retrieve.
+        """
+        files = re.findall(pattern=r'href="(data.*?.txt)"',
+                           string=self.request.text)
+        dates = ['20' + re.search(r'.*_(\d+).txt', x).groups(1)[0]
+                 for x in files]
+        index_names = [pd.to_datetime(f'{x[:4]}-{x[4:6]}-{x[6:]}')
+                       for x in dates]
+        self.data_files = pd.Series([f'http://web.mta.info/developers/{x}'
+                                     for x in files],
+                                    index=index_names,
+                                    name='url')
+
+    def format_date_time(self, data_file):
+        """
+        Format date and time into ISO 8601 Format
+
+        :param str data_file: url of data file to retrieve
+        """
+        request = requests.get(data_file).text
+        pattern = r'(\d{2})/(\d{2})/(\d{4}),(\d{2}:\d{2}:\d{2})'
+        self.data_text = re.sub(pattern, r'\3-\2-\1 \4', request)
