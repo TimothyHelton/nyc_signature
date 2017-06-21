@@ -13,6 +13,8 @@ import seaborn as sns
 
 
 ax_formatter = {
+    'billions': FuncFormatter(lambda x, position: f'{x * 1e-9:.0f}'),
+    'millions': FuncFormatter(lambda x, position: f'{x * 1e-6:.0f}'),
     'percent_convert': FuncFormatter(lambda x, position: f'{x * 100:.0f}%'),
     'percent': FuncFormatter(lambda x, position: f'{x:.0f}%'),
     'thousands': FuncFormatter(lambda x, position: f'{x * 1e-3:.0f}'),
