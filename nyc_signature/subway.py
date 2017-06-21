@@ -6,7 +6,6 @@
 .. moduleauthor:: Timothy Helton <timothy.j.helton@gmail.com>
 """
 import io
-import os.path as osp
 import re
 
 from bokeh import io as bkio
@@ -375,6 +374,22 @@ class Turnstile:
         self.data = None
         self.data_files = None
         self.data_text = None
+        self.data_types = {
+            'ctrl_area': str,
+            'unit': str,
+            'scp': str,
+            'station': str,
+            'line_name': str,
+            'division': str,
+            'date': str,
+            'time': str,
+            'description': str,
+            'entry': np.int32,
+            'exit': np.int32,
+        }
+        self.target_stations = None
+
+        self.available_data_files()
 
     def __repr__(self):
         return f'Turnstile()'
@@ -401,5 +416,36 @@ class Turnstile:
         :param str data_file: url of data file to retrieve
         """
         request = requests.get(data_file).text
-        pattern = r'(\d{2})/(\d{2})/(\d{4}),(\d{2}:\d{2}:\d{2})'
-        self.data_text = re.sub(pattern, r'\3-\2-\1 \4', request)
+        pattern = r'(\d{2})/(\d{2})/(\d{4})'
+        self.data_text = re.sub(pattern, r'\3-\1-\2', request)
+
+    def get_data(self, start, end):
+        """
+        Load turnstile data.
+
+        .. note:: The attribute "data" will be reset each time this method \
+            is called.
+
+        :param str start: most current date given as YYYY, YYYY-MM or \
+            YYYY-MM-DD
+        :param str end: oldest date given as YYYY, YYYY-MM or YYYY-MM-DD
+        """
+        self.data = None
+        data_urls = self.data_files[end:start]
+
+        frames = []
+        for url in data_urls:
+            self.format_date_time(url)
+            frames.append(pd.read_csv(io.StringIO(self.data_text),
+                                      dtype=self.data_types,
+                                      header=None,
+                                      names=self.data_types.keys(),
+                                      parse_dates=[[6, 7]],
+                                      skiprows=1,
+                                      )
+                          )
+        self.data = pd.concat(frames)
+        self.data.set_index('date_time', inplace=True)
+        for col in ('division', 'description'):
+            self.data.loc[:, col] = (self.data.loc[:, col]
+                                     .astype('category'))
