@@ -24,7 +24,7 @@ except ModuleNotFoundError:
     print('Upon instancing the Stations class please assign your key to the '
           'api_key attribute.')
 from nyc_signature import locations
-from nyc_signature.utils import size, save_fig
+from nyc_signature.utils import ax_formatter, size, save_fig
 
 
 class Stations:
@@ -387,7 +387,8 @@ class Turnstile:
             'entry': np.int32,
             'exit': np.int32,
         }
-        self.target_stations = None
+        self.target_data = None
+        self.targets = None
 
         self.available_data_files()
 
@@ -449,3 +450,69 @@ class Turnstile:
         for col in ('division', 'description'):
             self.data.loc[:, col] = (self.data.loc[:, col]
                                      .astype('category'))
+
+    def get_targets(self, qty=10):
+        """
+        Get subset of all value containing only target location stations.
+
+        .. warning:: The station dataset station names are not all exactly \
+            the same as the turnstile dataset station names.
+
+        :param int qty: number of top target stations to retrieve
+        """
+        stations = Stations()
+        stations.hospital_distances()
+        self.targets = stations.hosp_prox.head(qty)
+        self.targets = (self.targets
+                        .str
+                        .upper())
+        self.targets = (self.targets
+                        .str
+                        .replace('TH', ''))
+        self.targets = (self.targets
+                        .str
+                        .replace('RD', ''))
+        self.targets = (self.targets
+                        .str
+                        .replace('-', ' '))
+        self.targets = (self.targets
+                        .str
+                        .replace('PLAZA', 'PLZ'))
+        self.targets = (self.targets
+                        .str
+                        .replace('WYCK', 'WK'))
+
+        self.target_data = (self.data
+                            .loc[(self.data.station.isin(self.targets
+                                                         .values
+                                                         .tolist()))])
+
+    def targets_entry_plot(self, save=False):
+        """
+        Bar chart of turnstile entrance data.
+
+        :param bool save: if True the figure will be saved
+        """
+        fig = plt.figure('Station Box Plot',
+                         figsize=(8, 5), facecolor='white',
+                         edgecolor='black')
+        rows, cols = (1, 1)
+        ax0 = plt.subplot2grid((rows, cols), (0, 0))
+
+        (self.target_data
+         .groupby('station')['entry']
+         .sum()
+         .sort_values()
+         .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax0))
+
+        ax0.set_xlabel('Subway Station', fontsize=size['label'])
+        ax0.set_xticklabels(ax0.xaxis.get_majorticklabels(), rotation=80)
+        ax0.set_ylabel('Turnstile Entrance ($billions$)',
+                       fontsize=size['label'])
+        ax0.yaxis.set_major_formatter(ax_formatter['billions'])
+
+        plt.tight_layout()
+        plt.suptitle("Turnstile Entrance Data",
+                     fontsize=size['super_title'], y=1.05)
+
+        save_fig('age_voted', save)
