@@ -361,11 +361,12 @@ class Turnstile:
     :Attributes:
 
     **data**: *pandas.DataFrame* NYC turnstile data
-    **data_dir**: *str* path to the local data directory
     **data_files**: *list* names of all available data files to download from \
         the url attribute
+    **data_text**: *str* scraped text of NYC turnstile data
     **request**: *requests.models.Response* response object from scraping \
         the url attribute
+    **target_data** =
     **url**: *str* web address for turnstile data
     """
     def __init__(self):
@@ -387,8 +388,11 @@ class Turnstile:
             'entry': np.int32,
             'exit': np.int32,
         }
+        self.date_start = '2017-05'
+        self.date_end = '2017-05'
         self.target_data = None
         self.targets = None
+        self.top_stations = None
 
         self.available_data_files()
 
@@ -420,7 +424,7 @@ class Turnstile:
         pattern = r'(\d{2})/(\d{2})/(\d{4})'
         self.data_text = re.sub(pattern, r'\3-\1-\2', request)
 
-    def get_data(self, start, end):
+    def get_data(self, start=None, end=None):
         """
         Load turnstile data.
 
@@ -431,6 +435,15 @@ class Turnstile:
             YYYY-MM-DD
         :param str end: oldest date given as YYYY, YYYY-MM or YYYY-MM-DD
         """
+        if end is None:
+            end = self.date_end
+        else:
+            self.date_end = end
+        if start is None:
+            start = self.date_start
+        else:
+            self.date_start = start
+
         self.data = None
         data_urls = self.data_files[end:start]
 
@@ -487,6 +500,30 @@ class Turnstile:
                                                          .values
                                                          .tolist()))])
 
+    def get_top_stations(self):
+        """
+        Get top stations based on entrance data.
+
+        The ranking criteria is to find the fewest number of stations that \
+            has a combined total less than or equal to 90% of all entry values.
+        """
+        if self.target_data is None:
+            self.get_targets()
+
+        entry_data = (self.target_data
+                      .groupby('station')
+                      .entry
+                      .sum())
+
+        entry_data = entry_data.to_frame()
+        total = entry_data.entry.sum()
+        entry_data['normalized'] = entry_data.apply(lambda x: x / total)
+        entry_data.sort_values(by='normalized', ascending=False, inplace=True)
+        entry_data['cumsum_norm'] = entry_data.cumsum().normalized
+
+        self.top_stations = list(entry_data[entry_data.cumsum_norm <= 0.9]
+                                 .index)
+
     def targets_entry_plot(self, save=False):
         """
         Bar chart of turnstile entrance data.
@@ -500,19 +537,22 @@ class Turnstile:
         ax0 = plt.subplot2grid((rows, cols), (0, 0))
 
         (self.target_data
-         .groupby('station')['entry']
+         .groupby('station')[['entry', 'exit']]
          .sum()
-         .sort_values()
+         .sort_values(by='entry')
          .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax0))
 
+        ax0.set_title(f'{self.date_start} - {self.date_end}',
+                      fontsize=size['title'])
+        ax0.legend(['Entry', 'Exit'])
         ax0.set_xlabel('Subway Station', fontsize=size['label'])
         ax0.set_xticklabels(ax0.xaxis.get_majorticklabels(), rotation=80)
-        ax0.set_ylabel('Turnstile Entrance ($billions$)',
+        ax0.set_ylabel('Turnstile Use ($billions$)',
                        fontsize=size['label'])
         ax0.yaxis.set_major_formatter(ax_formatter['billions'])
 
         plt.tight_layout()
-        plt.suptitle("Turnstile Entrance Data",
-                     fontsize=size['super_title'], y=1.05)
+        plt.suptitle('Turnstile Data',
+                     fontsize=size['super_title'], x=0.54, y=1.05)
 
         save_fig('age_voted', save)
