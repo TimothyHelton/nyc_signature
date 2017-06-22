@@ -364,6 +364,7 @@ class Turnstile:
     **data_files**: *list* names of all available data files to download from \
         the url attribute
     **data_text**: *str* scraped text of NYC turnstile data
+    **days**: *tuple* weekday names
     **request**: *requests.models.Response* response object from scraping \
         the url attribute
     **target_data** =
@@ -390,6 +391,15 @@ class Turnstile:
         }
         self.date_start = '2017-05'
         self.date_end = '2017-05'
+        self.days = (
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday',
+            'Sunday',
+        )
         self.target_data = None
         self.targets = None
         self.top_stations = None
@@ -519,10 +529,20 @@ class Turnstile:
         total = entry_data.entry.sum()
         entry_data['normalized'] = entry_data.apply(lambda x: x / total)
         entry_data.sort_values(by='normalized', ascending=False, inplace=True)
-        entry_data['cumsum_norm'] = entry_data.cumsum().normalized
 
-        self.top_stations = list(entry_data[entry_data.cumsum_norm <= 0.9]
-                                 .index)
+        self.top_stations = (entry_data[entry_data.cumsum().normalized <= 0.9]
+                             .copy())
+
+        station_names = list(self.top_stations.index)
+
+        for day in self.days:
+            day_mask = self.target_data.index.weekday_name == day
+            station_mask = self.target_data.station.isin(station_names)
+            self.top_stations[day] = (self.target_data
+                                      .loc[day_mask & station_mask]
+                                      .groupby('station')
+                                      .sum()
+                                      .entry)
 
     def targets_entry_plot(self, save=False):
         """
@@ -542,12 +562,43 @@ class Turnstile:
          .sort_values(by='entry')
          .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax0))
 
-        ax0.set_title(f'{self.date_start} - {self.date_end}',
+        ax0.set_title(f'{self.date_start}  -  {self.date_end}',
                       fontsize=size['title'])
         ax0.legend(['Entry', 'Exit'])
         ax0.set_xlabel('Subway Station', fontsize=size['label'])
         ax0.set_xticklabels(ax0.xaxis.get_majorticklabels(), rotation=80)
         ax0.set_ylabel('Turnstile Use ($billions$)',
+                       fontsize=size['label'])
+        ax0.yaxis.set_major_formatter(ax_formatter['billions'])
+
+        plt.tight_layout()
+        plt.suptitle('Turnstile Data',
+                     fontsize=size['super_title'], x=0.53, y=1.05)
+
+        save_fig('age_voted', save)
+
+    def top_entry_bar_plot(self, save=False):
+        """
+        Bar chart of turnstile entrance data for top stations.
+
+        :param bool save: if True the figure will be saved
+        """
+        fig = plt.figure('Top Station Box Plot',
+                         figsize=(8, 5), facecolor='white',
+                         edgecolor='black')
+        rows, cols = (1, 1)
+        ax0 = plt.subplot2grid((rows, cols), (0, 0))
+
+        (self.top_stations
+         .sort_values(by='entry')
+         .loc[:, 'Monday':'Sunday']
+         .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax0))
+
+        ax0.set_title(f'{self.date_start}  -  {self.date_end}',
+                      fontsize=size['title'])
+        ax0.set_xlabel('Subway Station', fontsize=size['label'])
+        ax0.set_xticklabels(ax0.xaxis.get_majorticklabels(), rotation=80)
+        ax0.set_ylabel('Turnstile Entries ($billions$)',
                        fontsize=size['label'])
         ax0.yaxis.set_major_formatter(ax_formatter['billions'])
 
