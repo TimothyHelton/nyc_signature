@@ -551,25 +551,40 @@ class Turnstile:
         :param bool save: if True the figure will be saved
         """
         fig = plt.figure('Station Box Plot',
-                         figsize=(8, 5), facecolor='white',
+                         figsize=(8, 10), facecolor='white',
                          edgecolor='black')
-        rows, cols = (1, 1)
+        rows, cols = (2, 1)
         ax0 = plt.subplot2grid((rows, cols), (0, 0))
+        ax1 = plt.subplot2grid((rows, cols), (1, 0))
 
+        # Pie Plot
+        pie = (self.target_data
+               .groupby('station')['entry']
+               .sum())
+        (pie
+         .plot(kind='pie', colormap='CMRmap', explode=[0.05] * pie.shape[0],
+               labels=None, legend=None, shadow=True, ax=ax0))
+        ax0.set_aspect('equal')
+        ax0.set_ylabel('')
+        ax0.legend(bbox_to_anchor=(1.3, 0.5),
+                   labels=pie.index,
+                   loc='center')
+
+        # Bar Plot
         (self.target_data
          .groupby('station')[['entry', 'exit']]
          .sum()
          .sort_values(by='entry')
-         .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax0))
+         .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax1))
 
-        ax0.set_title(f'{self.date_start}  -  {self.date_end}',
+        ax1.set_title(f'{self.date_start}  -  {self.date_end}',
                       fontsize=size['title'])
-        ax0.legend(['Entry', 'Exit'])
-        ax0.set_xlabel('Subway Station', fontsize=size['label'])
-        ax0.set_xticklabels(ax0.xaxis.get_majorticklabels(), rotation=80)
-        ax0.set_ylabel('Turnstile Use ($billions$)',
+        ax1.legend(['Entry', 'Exit'])
+        ax1.set_xlabel('Subway Station', fontsize=size['label'])
+        ax1.set_xticklabels(ax0.xaxis.get_majorticklabels(), rotation=80)
+        ax1.set_ylabel('Turnstile Use ($billions$)',
                        fontsize=size['label'])
-        ax0.yaxis.set_major_formatter(ax_formatter['billions'])
+        ax1.yaxis.set_major_formatter(ax_formatter['billions'])
 
         plt.tight_layout()
         plt.suptitle('Turnstile Data',
