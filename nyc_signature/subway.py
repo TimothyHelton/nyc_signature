@@ -360,6 +360,9 @@ class Turnstile:
 
     :Attributes:
 
+    **current_station**: *str* name of current station
+    **daily_use**: *pandas.DataFrame** average turnstile daily use for the \
+        current station
     **data**: *pandas.DataFrame* NYC turnstile data
     **data_files**: *list* names of all available data files to download from \
         the url attribute
@@ -373,6 +376,8 @@ class Turnstile:
     def __init__(self):
         self.url = 'http://web.mta.info/developers/turnstile.html'
         self.request = requests.get(self.url)
+        self.current_station = None
+        self.daily_use = None
         self.data = None
         self.data_files = None
         self.data_text = None
@@ -408,6 +413,22 @@ class Turnstile:
 
     def __repr__(self):
         return f'Turnstile()'
+
+    def average_daily_use(self, station_name):
+        """
+        Determine the average turnstile use per day for a station.
+
+        :param str station_name: station name
+        """
+        if self.target_data is None:
+            self.get_targets()
+
+        self.current_station = station_name
+        station = self.target_data.query(f'station == "{station_name}"')
+        self.daily_use = (station
+                          .groupby([station.index.weekday,
+                                    station.index.time])
+                          .mean())
 
     def available_data_files(self):
         """
