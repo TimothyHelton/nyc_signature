@@ -24,7 +24,7 @@ except ModuleNotFoundError:
     print('Upon instancing the Stations class please assign your key to the '
           'api_key attribute.')
 from nyc_signature import locations
-from nyc_signature.utils import ax_formatter, size, save_fig
+from nyc_signature.utils import ax_formatter, colors, size, save_fig
 
 
 class Stations:
@@ -520,18 +520,18 @@ class Turnstile:
         if self.target_data is None:
             self.get_targets()
 
-        entry_data = (self.target_data
-                      .groupby('station')
-                      .entry
-                      .sum())
+        self.top_stations = (self.target_data
+                             .groupby('station')
+                             .entry
+                             .sum())
 
-        entry_data = entry_data.to_frame()
-        total = entry_data.entry.sum()
-        entry_data['normalized'] = entry_data.apply(lambda x: x / total)
-        entry_data.sort_values(by='normalized', ascending=False, inplace=True)
-
-        self.top_stations = (entry_data[entry_data.cumsum().normalized <= 0.9]
-                             .copy())
+        mask = (self.top_stations
+                .divide(self.top_stations.sum())
+                .sort_values(ascending=False)
+                .cumsum())
+        self.top_stations = (self.top_stations[mask <= 0.9]
+                             .sort_values(ascending=False)
+                             .to_frame())
 
         station_names = list(self.top_stations.index)
 
@@ -560,10 +560,12 @@ class Turnstile:
         # Pie Plot
         pie = (self.target_data
                .groupby('station')['entry']
-               .sum())
+               .sum()
+               .sort_values(ascending=False))
         (pie
-         .plot(kind='pie', colormap='CMRmap', explode=[0.05] * pie.shape[0],
-               labels=None, legend=None, shadow=True, ax=ax0))
+         .plot(kind='pie', colors=sns.color_palette('gnuplot', n_colors=10),
+               explode=[0.05] * pie.shape[0], labels=None, legend=None,
+               shadow=True, startangle=180, ax=ax0))
         ax0.set_aspect('equal')
         ax0.set_ylabel('')
         ax0.legend(bbox_to_anchor=(1.3, 0.5),
