@@ -521,17 +521,15 @@ class Turnstile:
             self.get_targets()
 
         self.top_stations = (self.target_data
-                             .groupby('station')
-                             .entry
+                             .groupby('station')['entry', 'exit']
                              .sum())
 
         mask = (self.top_stations
                 .divide(self.top_stations.sum())
-                .sort_values(ascending=False)
+                .sort_values(by='entry', ascending=False)
                 .cumsum())
-        self.top_stations = (self.top_stations[mask <= 0.9]
-                             .sort_values(ascending=False)
-                             .to_frame())
+        self.top_stations = (self.top_stations
+                             .loc[mask.entry <= 0.9])
 
         station_names = list(self.top_stations.index)
 
