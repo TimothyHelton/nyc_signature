@@ -360,17 +360,27 @@ class Turnstile:
 
     :Attributes:
 
+    **available_data_files**: *pandas.Series* url address for available data \
+        files to be scraped from the NYC MTA website
     **current_station**: *str* name of current station
     **daily_use**: *pandas.DataFrame** average turnstile daily use for the \
         current station
     **data**: *pandas.DataFrame* NYC turnstile data
+    **data_end**: *str* end date for analyzing target locations
     **data_files**: *list* names of all available data files to download from \
         the url attribute
+    **data_start**: *str* start date for analyzing target locations
     **data_text**: *str* scraped text of NYC turnstile data
+    **data_types**: *dict* data types for NYC turnstile data
     **days**: *tuple* weekday names
     **request**: *requests.models.Response* response object from scraping \
         the url attribute
-    **target_data** =
+    **target_data**: *pandas.DataFrame* filter turnstile data to only show \
+        the requested number of target subway stations
+    **targets**: *pandas.DataFrame* hospitals in close proximity to subway \
+        stations
+    **top_stations**: *pandas.DataFrame* the smallest number of target subway \
+        stations which comprise up to 90% of all turnstile use
     **url**: *str* web address for turnstile data
     """
     def __init__(self):
@@ -394,8 +404,6 @@ class Turnstile:
             'entry': np.int32,
             'exit': np.int32,
         }
-        self.date_start = '2017-05'
-        self.date_end = '2017-05'
         self.days = (
             'Monday',
             'Tuesday',
@@ -410,6 +418,8 @@ class Turnstile:
         self.top_stations = None
 
         self.available_data_files()
+        self.date_start = self.data_files.index[5].strftime('%Y-%m-%d')
+        self.date_end = self.data_files.index[1].strftime('%Y-%m-%d')
 
     def __repr__(self):
         return f'Turnstile()'
@@ -429,6 +439,53 @@ class Turnstile:
                           .groupby([station.index.weekday,
                                     station.index.time])
                           .mean())
+
+    def average_daily_use_plot(self, station_name):
+        """
+        Plot average daily turnstile use.
+
+        :param str station_name: station name
+        """
+        if self.target_data is not station_name:
+            self.average_daily_use(station_name)
+
+        fig = plt.figure('Station By Day',
+                         figsize=(12, 15), facecolor='white',
+                         edgecolor='black')
+        rows, cols = (4, 2)
+        ax0 = plt.subplot2grid((rows, cols), (0, 0))
+        ax1 = plt.subplot2grid((rows, cols), (0, 1), sharey=ax0)
+        ax2 = plt.subplot2grid((rows, cols), (1, 0))
+        ax3 = plt.subplot2grid((rows, cols), (1, 1), sharey=ax2)
+        ax4 = plt.subplot2grid((rows, cols), (2, 0))
+        ax5 = plt.subplot2grid((rows, cols), (2, 1), sharey=ax4)
+        ax6 = plt.subplot2grid((rows, cols), (3, 0))
+
+        axes = (ax0, ax1, ax2, ax3, ax4, ax5, ax6)
+
+        for n, ax, day in zip(range(7), axes, self.days):
+            (self.daily_use
+             .loc[(n, slice(pd.to_datetime('09:00:00').time(),
+                            pd.to_datetime('17:00:00').time())), :]
+             .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax))
+            ax.set_title(f'{day}',
+                         fontsize=size['title'])
+            ax.legend(['Entry', 'Exit'], fontsize=size['legend'],
+                      loc='upper right')
+            ax.set_xlabel('Time of Day', fontsize=size['label'])
+            ax.set_ylabel('Turnstile Use ($millions$)',
+                          fontsize=size['label'])
+            xticks = [x.get_text().split()[1].rstrip(')')
+                      for x in ax.xaxis.get_majorticklabels()]
+            ax.set_xticklabels(xticks, fontsize=size['legend'],
+                               rotation=80)
+            ax.yaxis.set_major_formatter(ax_formatter['millions'])
+
+        plt.tight_layout()
+        plt.suptitle(f'Daily Station Average Turnstile Use: '
+                     f'{station_name.title()}\n'
+                     f'{self.date_start}  -  {self.date_end}\n',
+                     fontsize=size['super_title'], y=1.05)
 
     def available_data_files(self):
         """
