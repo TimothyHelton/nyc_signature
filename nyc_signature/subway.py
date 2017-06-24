@@ -207,21 +207,32 @@ class Stations:
                           .sort_values('min_dist')
                           .idxmin(axis=1))
 
-    def hospital_proximity_plot(self, number=10):
+    def hospital_proximity_plot(self, number=10, stations=None):
         """
         Plot hospital and subway stations of interest
 
         .. warning:: This method requires a Google API Key
 
         :param int number: number of hospitals to query
+        :param list stations: only the stations supplied will be plotted
         """
+        def find_hospital_locs(interest_loc):
+            """
+            Find specific hospital locations
+
+            :param interest_loc: hospital names
+            :return: hospital locations only for areas of interest
+            :rtype: pandas.DataFrame
+            """
+            return (self.hosp.hospitals
+                    .loc[(self.hosp.hospitals
+                          .name.isin(interest_loc.index))])
+
         if self.hosp_prox is None:
             self.hospital_distances()
 
         hosp_interest = self.hosp_prox[:number]
-        hospital_locs = (self.hosp.hospitals
-                         .loc[(self.hosp.hospitals
-                               .name.isin(hosp_interest.index))])
+        hospital_locs = find_hospital_locs(hosp_interest)
 
         station_idx = (self.hosp_dist
                        .loc[hosp_interest.index, :]
@@ -236,6 +247,16 @@ class Stations:
                               .loc[['latitude', 'longitude'], :]
                               .T
                               .reset_index())
+
+        if stations:
+            idx = (self.hosp_stations[(self.hosp_stations
+                                      .name
+                                      .isin(stations))]
+                   .index
+                   .tolist())
+            self.hosp_stations = (self.hosp_stations.iloc[idx, :])
+            hosp_interest = hosp_interest.iloc[idx]
+            hospital_locs = find_hospital_locs(hosp_interest)
 
         plot = self.map_plot
         plot.title.text = ('New York City Hospitals and Subway Stations of '
