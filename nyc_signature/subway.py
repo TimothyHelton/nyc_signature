@@ -24,7 +24,7 @@ except ModuleNotFoundError:
     print('Upon instancing the Stations class please assign your key to the '
           'api_key attribute.')
 from nyc_signature import locations
-from nyc_signature.utils import ax_formatter, colors, size, save_fig
+from nyc_signature.utils import ax_formatter, size, save_fig
 
 
 class Stations:
