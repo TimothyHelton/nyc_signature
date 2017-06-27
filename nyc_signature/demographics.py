@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from nyc_signature.utils import ax_formatter, colors, size, save_fig
+from nyc_signature.utils import ax_formatter, size, save_fig
 
 
 class Age:
@@ -108,7 +108,7 @@ class Age:
         target_group = both_sexes.voted_yes.copy()
         target_group.loc[target_group < target_group.quantile(0.7)] = 0
         (target_group
-         .plot(kind='area', alpha=0.2, color=colors[2], label='Target Group',
+         .plot(kind='area', alpha=0.2, colors='C2', label='Target Group',
                ax=ax0))
 
         ax0.set_title('Voters vs Age', fontsize=size['title'])
@@ -120,7 +120,7 @@ class Age:
         for n, gender in enumerate((female, male)):
             (gender
              .voted_yes
-             .plot(kind='area', alpha=0.5, color=colors[n], ax=ax1))
+             .plot(kind='area', alpha=0.5, color=f'C{n}', ax=ax1))
         ax1.set_title('Voters vs Age by Gender', fontsize=size['title'])
 
         # Voters All US Percentage Plot
@@ -132,7 +132,7 @@ class Age:
         target_group = both_sexes.voted_yes_pct.copy()
         target_group.loc[target_group < 0.5] = 0
         (target_group
-         .plot(kind='area', alpha=0.2, color=colors[2], label='Target Group',
+         .plot(kind='area', alpha=0.2, color='C2', label='Target Group',
                ax=ax2))
 
         ax2.set_title('Percent Voters vs Age', fontsize=size['title'])
@@ -145,7 +145,7 @@ class Age:
             (gender
              .voted_yes
              .div(gender.us_population)
-             .plot(kind='area', alpha=0.5, color=colors[n], ax=ax3))
+             .plot(kind='area', alpha=0.5, color=f'C{n}', ax=ax3))
         ax3.set_title('Percent Voters vs Age by Gender',
                       fontsize=size['title'])
 
