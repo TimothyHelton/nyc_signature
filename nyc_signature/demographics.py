@@ -108,7 +108,7 @@ class Age:
         target_group = both_sexes.voted_yes.copy()
         target_group.loc[target_group < target_group.quantile(0.7)] = 0
         (target_group
-         .plot(kind='area', alpha=0.2, colors='C2', label='Target Group',
+         .plot(kind='area', alpha=0.2, color='C2', label='Target Group',
                ax=ax0))
 
         ax0.set_title('Voters vs Age', fontsize=size['title'])
