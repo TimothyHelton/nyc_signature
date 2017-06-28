@@ -461,52 +461,80 @@ class Turnstile:
                                     station.index.time])
                           .mean())
 
-    def average_daily_use_plot(self, station_name):
+    def daily_use_plot(self, station_name, save=False):
         """
         Plot average daily turnstile use.
 
         :param str station_name: station name
+        :param bool save: if True the figure will be saved
         """
         if self.target_data is not station_name:
             self.average_daily_use(station_name)
 
         fig = plt.figure('Station By Day',
-                         figsize=(12, 15), facecolor='white',
+                         figsize=(12, 12), facecolor='white',
                          edgecolor='black')
-        rows, cols = (4, 2)
+        rows, cols = (3, 1)
         ax0 = plt.subplot2grid((rows, cols), (0, 0))
-        ax1 = plt.subplot2grid((rows, cols), (0, 1), sharey=ax0)
-        ax2 = plt.subplot2grid((rows, cols), (1, 0))
-        ax3 = plt.subplot2grid((rows, cols), (1, 1), sharey=ax2)
-        ax4 = plt.subplot2grid((rows, cols), (2, 0))
-        ax5 = plt.subplot2grid((rows, cols), (2, 1), sharey=ax4)
-        ax6 = plt.subplot2grid((rows, cols), (3, 0))
+        ax1 = plt.subplot2grid((rows, cols), (1, 0), sharex=ax0, sharey=ax0)
+        ax2 = plt.subplot2grid((rows, cols), (2, 0), sharex=ax0, sharey=ax0)
 
-        axes = (ax0, ax1, ax2, ax3, ax4, ax5, ax6)
+        bar_plot = (self.daily_use
+                    .loc[(slice(0, 7),
+                          slice(pd.to_datetime('09:00:00').time(),
+                                pd.to_datetime('17:00:00').time())), :]
+                    .reset_index()
+                    .rename(columns={'date_time': 'weekday',
+                                     'level_1': 'time'}))
 
-        for n, ax, day in zip(range(7), axes, self.days):
-            (self.daily_use
-             .loc[(n, slice(pd.to_datetime('09:00:00').time(),
-                            pd.to_datetime('17:00:00').time())), :]
-             .plot(kind='bar', alpha=0.5, edgecolor='black', ax=ax))
-            ax.set_title(f'{day}',
-                         fontsize=size['title'])
-            ax.legend(['Entry', 'Exit'], fontsize=size['legend'],
+        bar_plot['day_name'] = (bar_plot
+                                .weekday
+                                .map(lambda x: f'{self.days[x]}'))
+        bar_plot['entry_legend'] = (bar_plot
+                                    .weekday
+                                    .map(lambda x: f'{self.days[x]} Entry'))
+        bar_plot['exit_legend'] = (bar_plot
+                                   .weekday
+                                   .map(lambda x: f'{self.days[x]} Exit'))
+
+        # entry data
+        sns.barplot(x='time', y='entry', hue='day_name', data=bar_plot,
+                    alpha=0.7, edgecolor='black', palette='gnuplot', ax=ax0)
+
+        ax0.set_title('Turnstile Entrances',
+                      fontsize=size['title'])
+
+        # exit data
+        sns.barplot(x='time', y='exit', hue='day_name', data=bar_plot,
+                    alpha=0.5, edgecolor='black', ax=ax1)
+
+        ax1.set_title('Turnstile Exits',
+                      fontsize=size['title'])
+
+        # combined plot
+        sns.barplot(x='time', y='entry', hue='entry_legend', data=bar_plot,
+                    alpha=0.7, edgecolor='black', palette='gnuplot', ax=ax2)
+        sns.barplot(x='time', y='exit', hue='exit_legend', data=bar_plot,
+                    alpha=0.5, edgecolor='black', ax=ax2)
+
+        ax2.set_title('Turnstile Entrance and Exits',
+                      fontsize=size['title'])
+
+        for ax in (ax0, ax1, ax2):
+            ax.legend(bbox_to_anchor=(1.2, 1), fontsize=size['legend'],
                       loc='upper right')
             ax.set_xlabel('Time of Day', fontsize=size['label'])
             ax.set_ylabel('Turnstile Use ($millions$)',
                           fontsize=size['label'])
-            xticks = [x.get_text().split()[1].rstrip(')')
-                      for x in ax.xaxis.get_majorticklabels()]
-            ax.set_xticklabels(xticks, fontsize=size['legend'],
-                               rotation=80)
             ax.yaxis.set_major_formatter(ax_formatter['millions'])
 
         plt.tight_layout()
-        plt.suptitle(f'Daily Station Average Turnstile Use: '
+        plt.suptitle(f'Station Average Turnstile Use: '
                      f'{station_name.title()}\n'
                      f'{self.date_start}  -  {self.date_end}\n',
-                     fontsize=size['super_title'], y=1.05)
+                     fontsize=size['super_title'], x=0.52, y=1.07)
+
+        save_fig('daily_use_plot', save)
 
     def available_data_files(self):
         """
